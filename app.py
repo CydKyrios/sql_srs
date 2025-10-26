@@ -18,7 +18,8 @@ with st.sidebar:
         placeholder="Select a theme...",
     )
     st.write("You selected:", theme)
-    exercise = con.execute(f"SELECT * FROM memory_state WHERE theme = '{theme}'").df()
+    exercise = con.execute(f"SELECT * FROM memory_state WHERE theme = '{theme}'").df().sort_values("last_reviewed").reset_index()
+    st.write(exercise)
     exercise_name = exercise.loc[0, "exercise_name"]
     with open(f"answers/{exercise_name}.sql", "r") as f:
         answer_from_file = f.read()
@@ -49,11 +50,12 @@ if sql_query:
         st.write("Some lines are missing!")
 
 
-
 tab1, tab2 = st.tabs(["Tables", "Solution"])
 #
 with tab1:
-    exercises_tables = ast.literal_eval(exercise.loc[0, "tables"])
+    # print("hello")
+    # exercises_tables = ast.literal_eval(exercise.loc[0, "tables"])
+    exercises_tables = exercise.loc[0, "tables"]
     for table in exercises_tables:
         st.write(f"table: {table}")
         df_table = con.execute(f"SELECT * FROM {table}").df()
