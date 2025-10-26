@@ -1,24 +1,60 @@
 # pylint: disable=missing-module-docstring
-import io
-
-import ast
+import os
+import logging
+import duckdb
 import streamlit as st
 import pandas as pd
-import duckdb
 
+
+if "data" not in os.listdir():
+    print("creating folder data")
+    logging.error(os.listdir())
+    logging.error("creating folder data")
+    os.mkdir("data")
+
+if "exercise_sql_tables.duckdb" not in os.listdir("data"):
+    exec(open("init_db.py").read())
+
+
+def compare_df_to_sol(q_input : str)->None:
+    '''
+    Compare df from qery to solution of exercise
+    :param q_input: input query
+    :return: None
+    '''
+    result = con.execute(q_input).df()
+    st.dataframe(result)
+    try:
+        result = result[solution_df.columns]
+        st.dataframe(result.compare(solution_df))
+    except KeyError as e:
+        st.write("Some columns are missing!")
+    if result.shape[0] != solution_df.shape[0]:
+        st.write("Some lines are missing!")
 
 con = duckdb.connect(database="data/exercise_sql_tables.duckdb", read_only=False)
 
 
 with st.sidebar:
+    list_theme = con.execute("SELECT theme FROM memory_state").df()["theme"].tolist()
     theme = st.selectbox(
         "What would you like to review?",
-        ["cross_joins", "GroupBy", "Windows Functions"],
+        list_theme,
         index=None,
         placeholder="Select a theme...",
     )
-    st.write("You selected:", theme)
-    exercise = con.execute(f"SELECT * FROM memory_state WHERE theme = '{theme}'").df().sort_values("last_reviewed").reset_index()
+    if theme:
+        st.write("You selected:", theme)
+        select_ex_q = f"SELECT * FROM memory_state WHERE theme = '{theme}'"
+    else:
+        select_ex_q = f"SELECT * FROM memory_state"
+    exercise = (
+        con.execute(select_ex_q)
+        .df()
+        .sort_values("last_reviewed")
+        .reset_index(drop=True)
+    )
+
     st.write(exercise)
     exercise_name = exercise.loc[0, "exercise_name"]
     with open(f"answers/{exercise_name}.sql", "r") as f:
@@ -37,18 +73,7 @@ st.header("Enter your SQL query:")
 sql_query = st.text_area(label="Input sql query...", key="user_input")
 
 if sql_query:
-    result = con.execute(sql_query).df()
-    st.dataframe(result)
-
-    try:
-        result = result[solution_df.columns]
-        st.dataframe(result.compare(solution_df))
-    except KeyError as e:
-        st.write("Some columns are missing!")
-
-    if result.shape[0] != solution_df.shape[0]:
-        st.write("Some lines are missing!")
-
+    compare_df_to_sol(sql_query)
 
 tab1, tab2 = st.tabs(["Tables", "Solution"])
 #
