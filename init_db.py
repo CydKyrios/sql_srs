@@ -64,3 +64,5 @@ trademarks = pd.read_csv(io.StringIO(trademarks))
 con.register('trademarks_tmp',trademarks)
 con.execute("DROP TABLE IF EXISTS trademarks")
 con.execute('CREATE TABLE trademarks AS SELECT * FROM trademarks_tmp')
+
+con.close()
